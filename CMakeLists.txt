@@ -46,8 +46,15 @@ target_include_directories( ${PROJECT_NAME}
 add_executable( test-${PROJECT_NAME} EXCLUDE_FROM_ALL
 	test/catch.cc
 	test/version.cc
+	test/layout.cc
 )
 
 target_link_libraries( test-${PROJECT_NAME}
 	${PROJECT_NAME}
+)
+
+target_compile_options( test-${PROJECT_NAME}
+	PRIVATE -Wall
+	PRIVATE -Wpedantic
+	PRIVATE -Wextra
 )
