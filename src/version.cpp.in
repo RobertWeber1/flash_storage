@@ -1,0 +1,10 @@
+#include <flash_storage/version.h>
+
+namespace flash_storage
+{
+
+char const* Version::project_name = "@PROJECT_NAME@";
+char const* Version::git_tag      = "@GIT_TAG@";
+char const* Version::commit_hash  = "@COMMIT_HASH@";
+
+} //namespace flash_storage
