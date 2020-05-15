@@ -47,9 +47,12 @@ add_executable( test-${PROJECT_NAME} EXCLUDE_FROM_ALL
 	test/catch.cc
 	test/version.cc
 	test/layout.cc
+	test/encoding.cc
 )
 
 target_link_libraries( test-${PROJECT_NAME}
+	asan
+	ubsan
 	${PROJECT_NAME}
 )
 
@@ -57,4 +60,7 @@ target_compile_options( test-${PROJECT_NAME}
 	PRIVATE -Wall
 	PRIVATE -Wpedantic
 	PRIVATE -Wextra
+	PRIVATE -fsanitize=address
+	PRIVATE -fsanitize=undefined
+	PRIVATE -std=c++14
 )
