@@ -48,6 +48,7 @@ add_executable( test-${PROJECT_NAME} EXCLUDE_FROM_ALL
 	test/version.cc
 	test/layout.cc
 	test/encoding.cc
+	test/sector_list.cc
 )
 
 target_link_libraries( test-${PROJECT_NAME}
