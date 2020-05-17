@@ -22,23 +22,43 @@ struct equal_to
 	}
 };
 
+template<class T>
+struct always
+{
+	constexpr bool operator()(const T &, const T &) const
+	{
+	    return true;
+	}
+};
+
 template<uint32_t Value>
-struct BaseAddress
+struct FlashBaseAddress
 {};
 
 template<uint32_t ... Values>
-struct Sizes
+struct SectorSizes
 {};
 
 template<class, class>
 struct Layout;
 
 template<uint32_t Address, uint32_t ... Sectors>
-struct Layout<BaseAddress<Address>, Sizes<Sectors...>>
+struct Layout<FlashBaseAddress<Address>, SectorSizes<Sectors...>>
 {
 	static constexpr size_t sector_count()
 	{
 		return sizeof...(Sectors);
+	}
+
+	static constexpr uint32_t base_address()
+	{
+		return Address;
+	}
+
+	static constexpr uint32_t size()
+	{
+		return for_each_<always<size_t>, 0>(
+				std::make_index_sequence<sector_count()>{});;
 	}
 
 	template<size_t I>

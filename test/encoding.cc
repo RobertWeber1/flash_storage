@@ -68,9 +68,9 @@ TEST_CASE("encoding")
 	REQUIRE((std::is_same<typename enc1::type_rep_t, uint8_t>::value));
 	REQUIRE((std::is_same<typename enc1::size_rep_t, uint8_t>::value));
 
-	REQUIRE(enc1(7,2).value() == 30);
-	REQUIRE(enc1(30).type() == 7);
-	REQUIRE(enc1(30).size() == 2);
+	REQUIRE(enc1(2, 7).value() == 30);
+	REQUIRE(enc1(2, 7).type() == 7);
+	REQUIRE(enc1(2, 7).size() == 2);
 
 	using enc2 = Encoding<8,2>;
 

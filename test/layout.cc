@@ -7,8 +7,8 @@ TEST_CASE("layout")
 {
 	using layout =
 		Layout<
-			BaseAddress<0x1001>,
-			Sizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
+			FlashBaseAddress<0x1001>,
+			SectorSizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
 
 	REQUIRE(layout::sector_count() == 6);
 
