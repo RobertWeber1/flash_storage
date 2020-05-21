@@ -38,23 +38,9 @@ struct TestMemory
 template<class Layout>
 struct TestFlash
 {
-	using sectors = make_full_sector_list<Layout>;
-
-	static constexpr uint32_t base_address = Layout::base_address();
-	static TestMemory<Layout::size()> memory;
-
-	template<class T>
-	static T read(uint32_t address)
-	{
-		// T data;
-		// read(address, &data, sizeof(T));
-		// return data;
-
-		typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
-		read(address, &data, sizeof(T));
-		return reinterpret_cast<T&>(data);
-	}
-
+////////////////////////////////////////////////////////////////////////////////
+//public interface used by flash_storage/functions/xyz.h
+//implement this functions target flash
 	static void read(uint32_t address, void* dst, uint32_t byte_count)
 	{
 		check(address, byte_count);
@@ -62,11 +48,6 @@ struct TestFlash
 		std::memcpy(dst, src, byte_count);
 	}
 
-	template<class T>
-	static void write(uint32_t address, T const& data)
-	{
-		write(address, &data, sizeof(T));
-	}
 
 	static void write(uint32_t address, void const* data, uint32_t byte_count)
 	{
@@ -93,11 +74,43 @@ struct TestFlash
 			*start = 0xff;
 			++start;
 		}
+
+		++erase_counter_[slot_index];
+	}
+
+////////////////////////////////////////////////////////////////////////////////
+//stuff used by unit tests
+	using sectors = make_full_sector_list<Layout>;
+
+	static constexpr uint32_t base_address = Layout::base_address();
+	static uint32_t erase_counter_[sectors::slot_count()];
+	static TestMemory<Layout::size()> memory;
+
+
+	template<class T>
+	static T read(uint32_t address)
+	{
+		typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
+		read(address, &data, sizeof(T));
+		return reinterpret_cast<T&>(data);
+	}
+
+	template<class T>
+	static void write(uint32_t address, T const& data)
+	{
+		write(address, &data, sizeof(T));
 	}
 
 	static void init()
 	{
 		memory.init();
+		std::memset(erase_counter_, 0, sizeof(erase_counter_));
+	}
+
+	static uint32_t erase_counter(size_t index)
+	{
+		check_slot(index);
+		return erase_counter_[index];
 	}
 
 private:
@@ -132,5 +145,8 @@ private:
 template<class Layout>
 TestMemory<Layout::size()> TestFlash<Layout>::memory =
 	TestMemory<Layout::size()>();
+
+template<class Layout>
+uint32_t TestFlash<Layout>::erase_counter_[];
 
 } //namespace flash_storage

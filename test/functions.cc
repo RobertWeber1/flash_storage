@@ -45,7 +45,16 @@ using layout =
 
 using flash = TestFlash<layout>;
 using list = make_sector_list<layout, 1, 2, 5>;
-using func = functions::MinRamMaxRuntime<list, flash, 4, 4, 10>;
+using func = functions::MinRamMaxRuntime<list, flash, 10, 8>;
+using Entry_t = Encoding<4,4>;
+
+template<class T>
+uint32_t write_test_entry(uint32_t address, uint32_t id, T const& data)
+{
+	flash::write(address, data);
+	flash::write(address + sizeof(T), Entry_t(sizeof(T), id));
+	return address + sizeof(T) + sizeof(Entry_t);
+}
 
 }
 
@@ -213,11 +222,12 @@ TEST_CASE("format sectors")
 }
 
 
+
+
 TEST_CASE("read value")
 {
 	flash::init();
 	uint8_t buf[9] = {};
-	using Entry_t = Encoding<4,4>;
 
 	SECTION("no valid sector")
 	{
@@ -236,17 +246,8 @@ TEST_CASE("read value")
 		flash::write(base, uint16_t(0x0000));
 		base +=2;
 
-		flash::write(base, uint64_t(0x0123456789abcdef));
-		base += 8;
-
-		flash::write(base, Entry_t(8, 1));
-		base += 1;
-
-		flash::write(base, uint64_t(0x0123456789abcdef));
-		base += 8;
-
-		flash::write(base, Entry_t(8, 3));
-		base += 1;
+		base = write_test_entry(base, 1, uint64_t(0x0123456789abcdef));
+		base = write_test_entry(base, 3, uint64_t(0x0123456789abcdef));
 
 		REQUIRE_FALSE(func::read_value(0x05, buf, 8));
 	}
@@ -257,27 +258,13 @@ TEST_CASE("read value")
 		flash::write(base, uint16_t(0x0000));
 		base +=2;
 
-		flash::write(base, uint64_t(0x0123456789abcdef));
-		base += 8;
-
-		flash::write(base, Entry_t(8, 5));
-		base += 1;
-
-		flash::write(base, uint64_t(0x0123456789abcdef));
-		base += 8;
-
-		flash::write(base, Entry_t(8, 3));
-		base += 1;
+		base = write_test_entry(base, 5, uint64_t(0x0123456789abcdef));
+		base = write_test_entry(base, 3, uint64_t(0x0123456789abcdef));
 
 		REQUIRE(func::read_value(5, buf, 8));
 		REQUIRE(*reinterpret_cast<uint64_t const*>(buf) == 0x0123456789abcdef);
 
-
-		flash::write(base, uint64_t(0xfedcba9876543210));
-		base += 8;
-
-		flash::write(base, Entry_t(8, 5));
-		base += 1;
+		base = write_test_entry(base, 5, uint64_t(0xfedcba9876543210));
 
 		REQUIRE(func::read_value(5, buf, 8));
 		REQUIRE(*reinterpret_cast<uint64_t const*>(buf) == 0xfedcba9876543210);
@@ -287,8 +274,83 @@ TEST_CASE("read value")
 
 TEST_CASE("transfer data")
 {
+	flash::init();
+	auto const src = list::first();
+	auto const dst = list::next(src);
 
+	flash::write(src.address, SectorState(SectorState::Valid, 0, 0));
 
+	SECTION("destination sector is erased if neccessary")
+	{
+		SECTION("destination is invalid")
+		{
+			flash::write(dst.address, SectorState(SectorState::Invalid, 0, 0));
+			func::transfer_data(src, dst);
+			REQUIRE(flash::erase_counter(dst.sector_number) == 1);
+		}
+
+		SECTION("destination is erased")
+		{
+			SECTION("no other data in sector")
+			{
+				func::transfer_data(src, dst);
+
+				REQUIRE(flash::erase_counter(dst.sector_number) == 0);
+			}
+
+			SECTION("no other data in sector")
+			{
+				flash::write(dst.address+5, uint8_t(42));
+
+				func::transfer_data(src, dst);
+
+				REQUIRE(flash::erase_counter(dst.sector_number) == 1);
+			}
+		}
+	}
+
+	SECTION("source sector is erased after transfer")
+	{
+		func::transfer_data(src, dst);
+
+		REQUIRE(
+			flash::read<SectorState>(src.address).state() ==
+			SectorState::Erased);
+	}
+
+	SECTION("destination sector is valid after transfer")
+	{
+		func::transfer_data(src, dst);
+
+		REQUIRE(
+			flash::read<SectorState>(dst.address).state() ==
+			SectorState::Valid);
+	}
+
+	SECTION("only the most recent values are transfered")
+	{
+		uint8_t buf[9] = {};
+		uint32_t base = src.address + 2;
+		base = write_test_entry(base, 5, uint64_t(1));
+		base = write_test_entry(base, 4, uint8_t(42));
+		base = write_test_entry(base, 5, uint64_t(2));
+		base = write_test_entry(base, 3, uint8_t(41));
+		base = write_test_entry(base, 4, uint8_t(43));
+
+		func::transfer_data(src, dst);
+
+		REQUIRE(flash::read<uint8_t>(dst.address+2) == 41);
+		REQUIRE(flash::read<Entry_t>(dst.address+3).type() == 3);
+		REQUIRE(flash::read<Entry_t>(dst.address+3).size() == 1);
+
+		REQUIRE(flash::read<uint8_t>(dst.address+4) == 43);
+		REQUIRE(flash::read<Entry_t>(dst.address+5).type() == 4);
+		REQUIRE(flash::read<Entry_t>(dst.address+5).size() == 1);
+
+		REQUIRE(flash::read<uint64_t>(dst.address+6) == 2);
+		REQUIRE(flash::read<Entry_t>(dst.address+14).type() == 5);
+		REQUIRE(flash::read<Entry_t>(dst.address+14).size() == 8);
+	}
 }
 
 
@@ -296,7 +358,6 @@ TEST_CASE("write value")
 {
 	flash::init();
 	uint8_t buf[8] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xba, 0xdc, 0xfe};
-	// using Entry_t = Encoding<4,4>;
 
 	SECTION("no valid sector")
 	{
@@ -333,3 +394,31 @@ TEST_CASE("write value")
 
 	}
 }
+
+
+// TEST_CASE("init")
+// {
+// 	func::init();
+
+// 	SECTION("one valid no transfering sector")
+// 	{
+
+// 	}
+
+// 	SECTION("no valid but one transfering sector")
+// 	{
+
+// 	}
+
+// 	SECTION("one valid and one transfering sector")
+// 	{}
+
+
+// 	SECTION("more then one valid or transfering sector")
+// 	{}
+
+// 	SECTION("all other sectors gets erased")
+// 	{
+
+// 	}
+// }

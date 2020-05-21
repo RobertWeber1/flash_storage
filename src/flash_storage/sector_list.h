@@ -79,6 +79,9 @@ struct make_sector_helper_<
 	std::index_sequence<Slots...>,
 	std::index_sequence<Is ...>>
 {
+	//TODO: check if all Is are smaller than sizeof...(Slots)
+	//      check if sizeof..(Is) <= sizeof...(Slots)
+
 	using type =
 		SectorList<
 			Sector<
