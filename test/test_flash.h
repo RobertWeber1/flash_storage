@@ -41,6 +41,9 @@ struct TestFlash
 ////////////////////////////////////////////////////////////////////////////////
 //public interface used by flash_storage/functions/xyz.h
 //implement this functions target flash
+	static void unlock()
+	{}
+
 	static void read(uint32_t address, void* dst, uint32_t byte_count)
 	{
 		check(address, byte_count);

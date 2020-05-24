@@ -88,6 +88,8 @@ struct MinRamMaxRuntime
 
 	static void init()
 	{
+		Flash::unlock();
+
 		auto const valid_sectors = get_sectors(&Self_t::is_valid);
 		auto const transfering_sectors = get_sectors(&Self_t::is_receiving);
 
