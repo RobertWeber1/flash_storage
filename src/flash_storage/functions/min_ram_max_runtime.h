@@ -400,23 +400,7 @@ private:
 	{
 		Flash::write(address, &data, sizeof(T));
 	}
-
-	struct Initializer
-	{
-		Initializer()
-		{
-			Self_t::init();
-		}
-	};
-
-	static Initializer initializer_;
 };
-
-
-template<class S, class F, uint32_t C, uint32_t M>
-typename MinRamMaxRuntime<S, F, C, M>::Initializer
-	MinRamMaxRuntime<S, F, C, M>::initializer_;
-
 
 
 } //namespace functions
