@@ -102,7 +102,15 @@ struct MinRamMaxRuntime
 			transfer_data(valid_sectors[0], transfering_sectors[0]);
 		}
 		else if(valid_sectors.size() == 1 and transfering_sectors.empty())
-		{}
+		{
+			auto state = read_flash<SectorState>(valid_sectors[0].address);
+
+			if(state.type_bits() != type_bits() or
+			   state.size_bits() != size_bits())
+			{
+				format();
+			}
+		}
 		else
 		{
 			format();
