@@ -27,7 +27,9 @@ struct FlashStorage
 			DataValues::max_byte_count()>;
 
 	template<class Tag>
-	static type_of<Tag, DataValues> read()
+	static type_of<Tag, DataValues> read(
+		type_of<Tag, DataValues> const& default_value =
+			type_of<Tag, DataValues>{})
 	{
 		static_assert(
 			DataValues::template contains<Tag>(),
@@ -35,10 +37,13 @@ struct FlashStorage
 
 		type_of<Tag, DataValues> result;
 
-		Functions_t::read_value(
+		if(Functions_t::read_value(
 			index_of<Tag, DataValues>(),
 			&result,
-			sizeof(result));
+			sizeof(result)) == 0)
+		{
+			result = default_value;
+		}
 
 		return result;
 	}
@@ -61,6 +66,5 @@ struct FlashStorage
 		Functions_t::init();
 	}
 };
-
 
 } //namespace flash_storage
