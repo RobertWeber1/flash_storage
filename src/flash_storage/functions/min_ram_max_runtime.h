@@ -252,10 +252,15 @@ struct MinRamMaxRuntime
 			uint8_t buffer[MaxDataSize];
 			uint32_t size = read_value(id, buffer, MaxDataSize, src);
 
+			if(size == 0)
+			{
+				continue;
+			}
+
 			uint8_t buffer_dst[MaxDataSize];
 			uint32_t size_dst = read_value(id, buffer_dst, MaxDataSize, dst);
 
-			if(size == 0 or equal(buffer, size, buffer_dst, size_dst))
+			if(equal(buffer, size, buffer_dst, size_dst))
 			{
 				continue;
 			}
