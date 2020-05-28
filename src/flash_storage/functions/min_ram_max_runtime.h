@@ -277,7 +277,7 @@ struct MinRamMaxRuntime
 		return address;
 	}
 
-	static void set(Slot const& slot, SectorState state)
+	static void set(Slot const& slot, SectorState::State state)
 	{
 		write_flash(
 			slot.address,
