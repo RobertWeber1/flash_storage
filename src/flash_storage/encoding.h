@@ -109,17 +109,27 @@ struct SectorState
 		Invalid
 	};
 
-	SectorState(uint16_t value = 0xabcd)
+	explicit SectorState(uint16_t value = 0xffff)
 	: value_(value)
 	{}
 
 	SectorState(State state, uint8_t type_bits, uint8_t size_bits)
-	: value_(type_bits << 10 | size_bits << 5 | state)
+	: value_(type_bits << 11 | size_bits << 6 | state)
 	{}
 
 	SectorState(uint16_t previous_value, State state)
 	: value_(previous_value & state)
 	{}
+
+	bool operator==(State s)
+	{
+		return state() == s;
+	}
+
+	bool operator!=(State s)
+	{
+		return state() != s;
+	}
 
 	operator State() const
 	{
@@ -139,18 +149,18 @@ struct SectorState
 
 	SectorState& state(State state)
 	{
-		value_ &= state;
+		value_ = (value_ & 0xffc0) | state;
 		return *this;
 	}
 
 	uint8_t type_bits() const
 	{
-		return (value_ >> 10) & mask<uint8_t>(5);
+		return (value_ >> 11) & mask<uint8_t>(5);
 	}
 
 	uint8_t size_bits() const
 	{
-		return (value_ >> 5) & mask<uint8_t>(5);
+		return (value_ >> 6) & mask<uint8_t>(5);
 	}
 
 	uint16_t value() const
