@@ -11,6 +11,8 @@ using FlashLayout_t =
 		FlashBaseAddress<0x1001>,
 		SectorSizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
 
+
+
 using DataValues_t =
 	DataValues<
 		DataValue<struct SomeTag1, int>,
@@ -34,9 +36,14 @@ using Storage =
 
 TEST_CASE("Read and write values")
 {
+	REQUIRE(
+		Storage::read<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
+		(std::array<double, 5>{0.1, 0.2, 0.3, 0.4, 0.5}));
+
 	Storage::init();
 	REQUIRE(Storage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
+
 	REQUIRE(
-		Storage::read<SomeTag4>() ==
+		Storage::read<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
 		(std::array<double, 5>{1.2, 2.3, 3.4, 4.5, 5.6}));
 }
