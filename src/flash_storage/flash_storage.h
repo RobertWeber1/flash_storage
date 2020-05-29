@@ -28,8 +28,7 @@ struct FlashStorage
 
 	template<class Tag>
 	static type_of<Tag, DataValues> read(
-		type_of<Tag, DataValues> const& default_value =
-			type_of<Tag, DataValues>{})
+		type_of<Tag, DataValues> const& default_value)
 	{
 		static_assert(
 			DataValues::template contains<Tag>(),
@@ -43,6 +42,26 @@ struct FlashStorage
 			sizeof(result)) == 0)
 		{
 			result = default_value;
+		}
+
+		return result;
+	}
+
+	template<class Tag>
+	static type_of<Tag, DataValues> read()
+	{
+		static_assert(
+			DataValues::template contains<Tag>(),
+			"T is not element of DataValues");
+
+		type_of<Tag, DataValues> result;
+
+		if(Functions_t::read_value(
+			index_of<Tag, DataValues>(),
+			&result,
+			sizeof(result)) == 0)
+		{
+			result = default_value(Tag{});
 		}
 
 		return result;
