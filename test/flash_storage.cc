@@ -5,33 +5,54 @@
 #include <chrono>
 
 using namespace flash_storage;
+using namespace std::chrono_literals;
 
 using FlashLayout_t =
 	Layout<
 		FlashBaseAddress<0x1001>,
 		SectorSizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
 
-struct SomeTag1 {};
-struct SomeTag2 {};
-struct SomeTag3 {};
-struct SomeTag4 {};
-struct SomeTag5 {};
+struct SomeTag1
+{
+	static constexpr int default_value()
+	{
+		return 42;
+	}
+};
 
-using DataValues_t =
-	DataValues<
-		DataValue<SomeTag1, int>,
-		DataValue<SomeTag2, float>,
-		DataValue<SomeTag3, bool>,
-		DataValue<SomeTag4, std::array<double, 5>>,
-		DataValue<SomeTag5, std::chrono::milliseconds>>;
+struct SomeTag2
+{
+	static constexpr float default_value()
+	{
+		return 42.42;
+		 }
+};
 
-using namespace std::chrono_literals;
+struct SomeTag3
+{
+	static constexpr bool default_value()
+	{
+		return false;
+	}
+};
 
-int default_value(SomeTag1) { return 42; }
-float default_value(SomeTag2) { return 42.42; }
-bool default_value(SomeTag3) { return false; }
-std::array<double, 5> default_value(SomeTag4) { return {5.6, 4.5, 3.4, 2.3, 1.2}; }
-std::chrono::milliseconds default_value(SomeTag5) { return 42s; }
+struct SomeTag4
+{
+	static constexpr std::array<double, 5> default_value()
+	{
+		return {5.6, 4.5, 3.4, 2.3, 1.2};
+	}
+};
+
+struct SomeTag5
+{
+	static constexpr std::chrono::milliseconds default_value()
+	{
+		return 42s;
+	}
+};
+
+
 
 using FlashImpl = TestFlash<FlashLayout_t>;
 
@@ -40,7 +61,12 @@ using Storage =
 		make_sector_list<
 			FlashLayout_t,
 			1, 2, 5>,
-		DataValues_t,
+		make_data_values<
+			SomeTag1,
+			SomeTag2,
+			SomeTag3,
+			SomeTag4,
+			SomeTag5>,
 		FlashImpl,
 		functions::MinRamMaxRuntime>;
 
@@ -51,14 +77,14 @@ TEST_CASE("Read and write values (local default)")
 	FlashImpl::init();
 
 	REQUIRE(
-		Storage::read<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
+		Storage::read_or<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
 		(std::array<double, 5>{0.1, 0.2, 0.3, 0.4, 0.5}));
 
 	Storage::init();
 	REQUIRE(Storage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
 
 	REQUIRE(
-		Storage::read<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
+		Storage::read_or<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
 		(std::array<double, 5>{1.2, 2.3, 3.4, 4.5, 5.6}));
 }
 

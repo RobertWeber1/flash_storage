@@ -16,9 +16,6 @@ template<
 	template<class, class, uint32_t, uint32_t>class Functions>
 struct FlashStorage
 {
-	//TODOs:
-	//[ ] check sum of data values + encoding overhead fits in smalles sector
-
 	using Functions_t =
 		Functions<
 			SectorList,
@@ -27,14 +24,14 @@ struct FlashStorage
 			DataValues::max_byte_count()>;
 
 	template<class Tag>
-	static type_of<Tag, DataValues> read(
-		type_of<Tag, DataValues> const& default_value)
+	static type_of<Tag> read_or(
+		type_of<Tag> const& default_value)
 	{
 		static_assert(
 			DataValues::template contains<Tag>(),
 			"T is not element of DataValues");
 
-		type_of<Tag, DataValues> result;
+		type_of<Tag> result;
 
 		if(Functions_t::read_value(
 			index_of<Tag, DataValues>(),
@@ -48,27 +45,27 @@ struct FlashStorage
 	}
 
 	template<class Tag>
-	static type_of<Tag, DataValues> read()
+	static type_of<Tag> read()
 	{
 		static_assert(
 			DataValues::template contains<Tag>(),
 			"T is not element of DataValues");
 
-		type_of<Tag, DataValues> result;
+		type_of<Tag> result;
 
 		if(Functions_t::read_value(
 			index_of<Tag, DataValues>(),
 			&result,
 			sizeof(result)) == 0)
 		{
-			result = default_value(Tag{});
+			result = Tag::default_value();
 		}
 
 		return result;
 	}
 
 	template<class Tag>
-	static bool write(type_of<Tag, DataValues> const& value)
+	static bool write(type_of<Tag> const& value)
 	{
 		static_assert(
 			DataValues::template contains<Tag>(),

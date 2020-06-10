@@ -6,13 +6,11 @@ namespace flash_storage
 {
 
 
-template<class Tag, class Type>
+template<class Tag>
 struct DataValue
 {
 	using tag = Tag;
-
-	//TODO remove cv-qualifiers
-	using type = Type;
+	using type = decltype(Tag::default_value());
 };
 
 
@@ -44,22 +42,25 @@ struct DataValues : Values ...
 };
 
 
+template<class ... Tags>
+using make_data_values = DataValues<DataValue<Tags>...>;
+
 namespace detail
 {
 
 
-template<class, class>
-struct type_of;
+// template<class, class>
+// struct type_of;
 
 
-template<class Tag, class ... Values>
-struct type_of<Tag, DataValues<Values...>>
-{
-	template<class Type>
-	static typename DataValue<Tag, Type>::type helper_(DataValue<Tag, Type>);
+// template<class Tag, class ... Values>
+// struct type_of<Tag, DataValues<Values...>>
+// {
+// 	template<class Type>
+// 	static typename DataValue<Tag, Type>::type helper_(DataValue<Tag, Type>);
 
-	using type = decltype(helper_(DataValues<Values...>{}));
-};
+// 	using type = decltype(helper_(DataValues<Values...>{}));
+// };
 
 
 template<bool IsSame, size_t Index>
@@ -98,8 +99,8 @@ struct index_of<Tag, DataValues<Values...>, std::index_sequence<Is...>>
 } //namespace detail
 
 
-template<class Tag, class Values>
-using type_of = typename detail::type_of<Tag, Values>::type;
+template<class Tag>
+using type_of = decltype(Tag::default_value());
 
 
 template<class Tag, class Values>
