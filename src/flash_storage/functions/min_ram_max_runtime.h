@@ -57,24 +57,12 @@ struct MinRamMaxRuntime
 			state != SectorState::Valid;
 	}
 
-	template<class Func>
-	static void for_each_sector(Func func)
-	{
-		const auto first = SectorList::first();
-		auto current = first;
-		do
-		{
-			func(current);
-		}
-		while((current = SectorList::next(current)) != first);
-	}
-
 	template<class Pred>
 	static Sectors_t get_sectors(Pred pred)
 	{
 		Sectors_t result;
 
-		for_each_sector(
+		for_each<SectorList>(
 			[&result, &pred](Slot const& slot)
 			{
 				if(pred(slot))
@@ -116,7 +104,7 @@ struct MinRamMaxRuntime
 			format();
 		}
 
-		for_each_sector(
+		for_each<SectorList>(
 			[](Slot const& slot)
 			{
 				if(is_invalid(slot) or is_erased(slot))

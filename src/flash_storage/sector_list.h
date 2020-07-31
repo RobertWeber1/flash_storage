@@ -69,6 +69,22 @@ const Slot SectorList<Sectors...>::slots[] = {Sectors::slot()... , {0,0,0,0}};
 ////////////////////////////////////////////////////////////////////////////////
 
 
+template<class Sectors, class Func>
+void for_each(Func func)
+{
+	const auto first = Sectors::first();
+	auto current = first;
+	do
+	{
+		func(current);
+	}
+	while((current = Sectors::next(current)) != first);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
 template<class Layout, class Slots, class Indices>
 struct make_sector_helper_;
 
@@ -107,5 +123,6 @@ using make_full_sector_list =
 		Layout,
 		std::make_index_sequence<Layout::sector_count()>,
 		std::make_index_sequence<Layout::sector_count()>>::type;
+
 
 } //namespace flash_storage

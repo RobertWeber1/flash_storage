@@ -32,3 +32,16 @@ TEST_CASE("make sector list")
 	REQUIRE(wrapped.address == 0x1101);
 	REQUIRE(wrapped.size == 0x2000);
 }
+
+
+TEST_CASE("for each")
+{
+	int count = 0;
+	for_each<list>(
+		[&count](flash_storage::Slot const& /*slot*/)
+		{
+			count++;
+		});
+
+	REQUIRE(count == 3);
+}
