@@ -4,15 +4,15 @@
 
 using namespace flash_storage;
 
+using layout =
+	Layout<
+		FlashBaseAddress<0x1001>,
+		SectorSizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
+
+using list = make_sector_list<layout, 1, 2, 5>;
+
 TEST_CASE("make sector list")
 {
-	using layout =
-		Layout<
-			FlashBaseAddress<0x1001>,
-			SectorSizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
-
-	using list = make_sector_list<layout, 1, 2, 5>;
-
 	static_assert(list::slot_count() == 3, "");
 
 	Slot first   = list::first();
