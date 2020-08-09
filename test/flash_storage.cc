@@ -1,7 +1,5 @@
 #include "catch.h"
 #include <flash_storage/flash_storage.h>
-#include <flash_storage/functions/min_ram_max_runtime.h>
-#include <flash_storage/functions/cached_access.h>
 #include "test_flash.h"
 #include <chrono>
 
@@ -57,7 +55,7 @@ using namespace std::chrono_literals;
 using FlashLayout_t =
 	Layout<
 		FlashBaseAddress<0x1001>,
-		SectorSizes<0x100, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
+		SectorSizes<0x10, 0x2000, 0x5000, 0x5000 , 0x80000, 0x10000>>;
 
 struct SomeTag1
 {
@@ -113,57 +111,7 @@ using Storage =
 	FlashStorage<
 		make_sector_list<
 			FlashLayout_t,
-			1, 2, 5>,
-		make_data_values<
-			SomeTag1,
-			SomeTag2,
-			SomeTag3,
-			SomeTag4,
-			SomeTag5>,
-		FlashImpl,
-		functions::MinRamMaxRuntime>;
-
-
-
-TEST_CASE("Read and write values (local default)")
-{
-	FlashImpl::init();
-
-	REQUIRE(
-		Storage::read_or<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
-		(std::array<double, 5>{0.1, 0.2, 0.3, 0.4, 0.5}));
-
-	Storage::init();
-	REQUIRE(Storage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
-
-	REQUIRE(
-		Storage::read_or<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
-		(std::array<double, 5>{1.2, 2.3, 3.4, 4.5, 5.6}));
-}
-
-
-TEST_CASE("Read and write values (global default)")
-{
-	FlashImpl::init();
-
-	REQUIRE(
-		Storage::read<SomeTag4>() ==
-		(std::array<double, 5>{5.6, 4.5, 3.4, 2.3, 1.2}));
-
-	Storage::init();
-	REQUIRE(Storage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
-
-	REQUIRE(
-		Storage::read<SomeTag4>() ==
-		(std::array<double, 5>{1.2, 2.3, 3.4, 4.5, 5.6}));
-}
-
-
-using CachedStorage =
-	FlashStorage<
-		make_sector_list<
-			FlashLayout_t,
-			1, 2, 5>,
+			0, 2, 5>,
 		make_data_values<
 			SomeTag1,
 			SomeTag2,
@@ -171,46 +119,76 @@ using CachedStorage =
 			SomeTag4,
 			SomeTag5,
 			SomeTag6>,
-		FlashImpl,
-		functions::CachedAccess>;
+		FlashImpl>;
 
-TEST_CASE("Read with cached start of data")
+
+TEST_CASE("Read and write values (local default)")
 {
-	FlashImpl::init();
+	Storage::init();
 
 	REQUIRE(
-		CachedStorage::read<SomeTag4>() ==
-		(std::array<double, 5>{5.6, 4.5, 3.4, 2.3, 1.2}));
+		Storage::read<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
+		(std::array<double, 5>{0.1, 0.2, 0.3, 0.4, 0.5}));
 
-	CachedStorage::init();
-	REQUIRE(CachedStorage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
+	REQUIRE(Storage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
 
 	REQUIRE(
-		CachedStorage::read<SomeTag4>() ==
+		Storage::read<SomeTag4>({0.1, 0.2, 0.3, 0.4, 0.5}) ==
 		(std::array<double, 5>{1.2, 2.3, 3.4, 4.5, 5.6}));
 }
 
-
-TEST_CASE("update value")
+TEST_CASE("Read and write values (global default)")
 {
-	FlashImpl::init();
+	Storage::init();
 
 	REQUIRE(
-		CachedStorage::read<SomeTag6>() ==
-		(std::array<uint8_t, 5>{0,0,0,0,0}));
+		Storage::read<SomeTag4>() ==
+		(std::array<double, 5>{5.6, 4.5, 3.4, 2.3, 1.2}));
 
-	CachedStorage::init();
-	REQUIRE(CachedStorage::update<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0xfe}));
+	REQUIRE(Storage::write<SomeTag4>({1.2, 2.3, 3.4, 4.5, 5.6}));
 
 	REQUIRE(
-		CachedStorage::read<SomeTag6>() ==
-		(std::array<uint8_t, 5>{0xff, 0xff, 0xff, 0xff, 0xfe}));
-
-
-	REQUIRE(CachedStorage::update<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0xf0}));
-
-	// REQUIRE(
-	// 	CachedStorage::read<SomeTag6>() ==
-	// 	(std::array<uint8_t, 5>{0xff, 0xff, 0xff, 0xff, 0xf0}));
+		Storage::read<SomeTag4>() ==
+		(std::array<double, 5>{1.2, 2.3, 3.4, 4.5, 5.6}));
 }
 
+TEST_CASE("write/update value")
+{
+	Storage::init();
+
+	SECTION("value not present")
+	{
+		REQUIRE(Storage::write<SomeTag6>({0x00, 0xff, 0xff, 0xff, 0xfe}));
+
+		REQUIRE(
+			Storage::read<SomeTag6>() ==
+			(std::array<uint8_t, 5>{0x00, 0xff, 0xff, 0xff, 0xfe}));
+
+		SECTION("update possible")
+		{
+			REQUIRE(Storage::write<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0xf0}));
+			REQUIRE(
+				Storage::read<SomeTag6>() ==
+				(std::array<uint8_t, 5>{0xff, 0xff, 0xff, 0xff, 0xf0}));
+		}
+
+		SECTION("update not possible")
+		{
+			REQUIRE(Storage::write<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0x0f}));
+			REQUIRE(
+				Storage::read<SomeTag6>() ==
+				(std::array<uint8_t, 5>{0xff, 0xff, 0xff, 0xff, 0x0f}));
+		}
+	}
+
+	SECTION("update causes transfer")
+	{
+		REQUIRE(Storage::write<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0xfe}));
+		REQUIRE(Storage::write<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0x0f}));
+		REQUIRE(Storage::write<SomeTag6>({0xff, 0xff, 0xff, 0xff, 0xfe}));
+
+		REQUIRE(
+			Storage::read<SomeTag6>() ==
+			(std::array<uint8_t, 5>{0xff, 0xff, 0xff, 0xff, 0xfe}));
+	}
+}

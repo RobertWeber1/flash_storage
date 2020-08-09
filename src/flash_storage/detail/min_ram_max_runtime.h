@@ -2,12 +2,12 @@
 #include <flash_storage/static_vector.h>
 #include <flash_storage/sector_list.h>
 #include <flash_storage/encoding.h>
-
+#include <string.h>
 
 namespace flash_storage
 {
 
-namespace functions
+namespace detail
 {
 
 
@@ -16,10 +16,10 @@ template<
 	class Flash,
 	uint32_t IdCount,
 	uint32_t MaxDataSize>
-struct CachedAccess
+struct MinRamMaxRuntime
 {
 	using Self_t =
-		CachedAccess<
+		MinRamMaxRuntime<
 			SectorList,
 			Flash,
 			IdCount,
@@ -74,13 +74,6 @@ struct CachedAccess
 		return result;
 	}
 
-	static void set_current_slot(Slot slot)
-	{
-		current_slot_ = slot;
-		start_of_data_ = find_last_entry(slot);
-		smallest_possible_addess_ = slot.address + sizeof(SectorState);
-	}
-
 	static void init()
 	{
 		Flash::unlock();
@@ -122,22 +115,43 @@ struct CachedAccess
 					}
 				}
 			});
+	}
 
-		set_current_slot(current_read_sector());
+	static void* read_value(Id_t id, void* dst, uint32_t byte_count, void const* default_value)
+	{
+		if(read_value(id, dst, byte_count, current_read_sector()) == 0)
+		{
+			::memcpy(dst, default_value, byte_count);
+		}
+
+		return dst;
 	}
 
 	static uint32_t read_value(Id_t id, void* dst, uint32_t byte_count)
 	{
-		return read_value(id, dst, byte_count, start_of_data_);
+		return read_value(id, dst, byte_count, current_read_sector());
 	}
 
 	static uint32_t read_value(
 		Id_t id,
 		void* dst,
 		uint32_t byte_count,
-		uint32_t address)
+		Slot const& slot)
 	{
-		while(address > smallest_possible_addess_)
+		if(not slot)
+		{
+			return 0;
+		}
+
+		auto address = find_last_enty(slot);
+		auto smallest_possible_addess = slot.address + sizeof(SectorState);
+
+		if(address == smallest_possible_addess)
+		{
+			return 0;
+		}
+
+		do
 		{
 			auto const entry = read_flash<Encoding_t>(address);
 			auto begin = address - entry.size();
@@ -153,11 +167,22 @@ struct CachedAccess
 			}
 			else
 			{
-				address = begin - sizeof(Encoding_t);
+				address = begin - 1;
 			}
 		}
+		while(address > smallest_possible_addess);
 
 		return 0;
+	}
+
+	static bool write_value(
+		Id_t id,
+		void const* src,
+		uint32_t byte_count,
+		void * buffer_,
+		void const* default_value)
+	{
+		return true;
 	}
 
 	static bool write_value(Id_t id, void const* src, uint32_t byte_count)
@@ -176,7 +201,7 @@ struct CachedAccess
 			return false;
 		}
 
-		auto address = start_of_data_ + sizeof(Encoding_t);
+		auto address = find_last_enty(slot) + sizeof(Encoding_t);
 
 		auto const occupied = (address - slot.address);
 
@@ -192,32 +217,7 @@ struct CachedAccess
 
 	static void update_value(Id_t id, void const* src, uint32_t byte_count)
 	{
-		update_value(id, src, byte_count, start_of_data_);
-	}
-
-	static void update_value(
-		Id_t id,
-		void const* src,
-		uint32_t byte_count,
-		uint32_t address)
-	{
-		while(address > smallest_possible_addess_)
-		{
-			auto const entry = read_flash<Encoding_t>(address);
-			auto begin = address - entry.size();
-
-			if(entry.type() == id)
-			{
-				auto const bytes_to_read =
-					std::min<uint32_t>(byte_count, entry.size());
-
-				write_value_(address, byte_count, src, id);
-			}
-			else
-			{
-				address = begin - sizeof(Encoding_t);
-			}
-		}
+		write_value(id, src, byte_count, current_write_sector());
 	}
 
 	static bool equal(
@@ -287,8 +287,6 @@ struct CachedAccess
 
 		set(dst, SectorState::Valid);
 
-		set_current_slot(dst);
-
 		return address;
 	}
 
@@ -299,7 +297,7 @@ struct CachedAccess
 			SectorState(state, type_bits(), size_bits()));
 	}
 
-	static uint32_t find_last_entry(Slot const& slot)
+	static uint32_t find_last_enty(Slot const& slot)
 	{
 		uint32_t address = slot.address + slot.size - sizeof(Encoding_t);
 		auto const first_addr = slot.address + sizeof(SectorState);
@@ -400,8 +398,6 @@ private:
 		Flash::write(address, src, byte_count);
 
 		write_flash(entry_addr, Encoding_t(byte_count, id));
-
-		start_of_data_ = entry_addr;
 	}
 
 	template<class T>
@@ -417,23 +413,9 @@ private:
 	{
 		Flash::write(address, &data, sizeof(T));
 	}
-
-private:
-	static Slot current_slot_;
-	static uint32_t start_of_data_;
-	static uint32_t smallest_possible_addess_;
 };
 
 
-template<class SectorList, class Flash, uint32_t IdCount, uint32_t MaxDataSize>
-Slot CachedAccess<SectorList, Flash, IdCount, MaxDataSize>::current_slot_;
-
-template<class SectorList, class Flash, uint32_t IdCount, uint32_t MaxDataSize>
-uint32_t CachedAccess<SectorList, Flash, IdCount, MaxDataSize>::start_of_data_;
-
-template<class SectorList, class Flash, uint32_t IdCount, uint32_t MaxDataSize>
-uint32_t CachedAccess<SectorList, Flash, IdCount, MaxDataSize>::smallest_possible_addess_;
-
-} //namespace functions
+} //namespace detail
 
 } //namespace flash_storage

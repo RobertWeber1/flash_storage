@@ -39,6 +39,11 @@ struct DataValues : Values ...
 	{
 		return std::max<size_t>({sizeof(typename Values::type)...});
 	}
+
+	static constexpr size_t max_alignment()
+	{
+		return std::max<size_t>({alignof(typename Values::type)...});
+	}
 };
 
 

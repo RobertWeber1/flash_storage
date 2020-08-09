@@ -2,7 +2,7 @@
 #include <flash_storage/encoding.h>
 #include <flash_storage/layout.h>
 #include <flash_storage/sector_list.h>
-#include <flash_storage/functions/min_ram_max_runtime.h>
+#include <flash_storage/detail/min_ram_max_runtime.h>
 #include "test_flash.h"
 #include <tuple>
 #include <array>
@@ -45,7 +45,7 @@ using layout =
 
 using flash = TestFlash<layout>;
 using list = make_sector_list<layout, 1, 2, 5>;
-using func = functions::MinRamMaxRuntime<list, flash, 10, 8>;
+using func = detail::MinRamMaxRuntime<list, flash, 10, 8>;
 using Entry_t = Encoding<4,4>;
 
 template<class T>
